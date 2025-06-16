@@ -2,13 +2,11 @@ import discord
 from discord.ext import commands
 from dotenv import load_dotenv
 import os
-import openai
 
 load_dotenv()
 
 
 token = os.getenv('token')
-openai.api_key = os.getenv('OPENAI_API_KEY')
 
 
 intents = discord.Intents.all()
