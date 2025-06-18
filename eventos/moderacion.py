@@ -1,3 +1,4 @@
+import discord
 from discord.ext import commands
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
@@ -32,37 +33,43 @@ class Moderacion(commands.Cog):
 
             if toxic_score > 0.7:
                 await message.delete()
-                
-                # Incremento del conteo
+
                 user_id = message.author.id
                 guild_id = message.guild.id
+
                 user_data = counts_collection.find_one_and_update(
                     {"guild_id": guild_id, "user_id": user_id},
-                    {"$inc": {"count": 1}},
+                    {
+                        "$inc": {"count": 1},
+                        "$push": {"insults": message.content}
+                    },
                     upsert=True,
                     return_document=True
                 )
+
                 insultos = user_data["count"] if user_data and "count" in user_data else 1
 
-                # Obtener canal de logs
                 log_config = logs_collection.find_one({"guild_id": guild_id})
                 if log_config:
                     channel_id = log_config.get("channel_id")
-                    if channel_id:
-                        canal = message.guild.get_channel(channel_id)
-                        if canal:
-                            await canal.send(
-                                f"**Log - Language Moderation**\n"
-                                f"👤 Usuario: `{message.author} ({message.author.id})`\n"
-                                f"💬 Mensaje: `{message.content}`\n"
-                                f"🚫 Cuántas veces ha insultado: **{insultos}**"
-                            )
+                    canal = message.guild.get_channel(channel_id) if channel_id else None
+                    if canal:
+                        embed = discord.Embed(
+                            title="🚨 Log – Language Moderation",
+                            description=f"**Mensaje ofensivo eliminado**",
+                            color=discord.Color.red()
+                        )
+                        embed.add_field(name="👤 Usuario", value=f"{message.author} (`{message.author.id}`)", inline=False)
+                        embed.add_field(name="💬 Contenido", value=message.content[:1024], inline=False)
+                        embed.add_field(name="🚫 Total de insultos", value=str(insultos), inline=True)
+                        embed.add_field(name="⚙️ Score de toxicidad", value=f"{toxic_score:.2f}", inline=True)
+                        embed.set_footer(text=f"Servidor: {message.guild.name}", icon_url=message.guild.icon.url if message.guild.icon else None)
+                        embed.timestamp = message.created_at
 
-                # Aviso al canal de origen
-                await message.channel.send(
-                    f"⚠️ {message.author.mention}, tu mensaje fue eliminado por contenido ofensivo."
-                )
-                print(f"[MODERACIÓN] TOXICIDAD ({toxic_score:.2f}): {message.content}")
+                        await canal.send(embed=embed)
+
+                await message.channel.send(f"⚠️ {message.author.mention}, tu mensaje fue eliminado por contenido ofensivo.")
+                print(f"[MODERACIÓN] ({toxic_score:.2f}): {message.content}")
 
         except Exception as e:
             print(f"[ERROR Moderación]: {e}")
