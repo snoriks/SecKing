@@ -55,9 +55,9 @@ class Moderacion(commands.Cog):
                     canal = message.guild.get_channel(channel_id) if channel_id else None
                     if canal:
                         embed = discord.Embed(
-                            title="🚨 Log – Language Moderation",
+                            title="Language Moderation - Logs 📜",
                             description=f"**Mensaje ofensivo eliminado**",
-                            color=discord.Color.red()
+                            color=discord.Color.from_rgb(0,0,0)
                         )
                         embed.add_field(name="👤 Usuario", value=f"{message.author} (`{message.author.id}`)", inline=False)
                         embed.add_field(name="💬 Contenido", value=message.content[:1024], inline=False)
@@ -67,8 +67,13 @@ class Moderacion(commands.Cog):
                         embed.timestamp = message.created_at
 
                         await canal.send(embed=embed)
-
-                await message.channel.send(f"⚠️ {message.author.mention}, tu mensaje fue eliminado por contenido ofensivo.")
+                    
+                    embed1 = discord.Embed(
+                        title="SECKING 👑",
+                        description=f"{message.author.mention} tu mensaje fue eliminado por contenido ofensivo.",
+                        color=discord.Color.from_rgb(0,0,0)
+                    )
+                await message.channel.send(embed=embed1)
                 print(f"[MODERACIÓN] ({toxic_score:.2f}): {message.content}")
 
         except Exception as e:

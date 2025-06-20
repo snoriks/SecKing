@@ -22,18 +22,29 @@ class SetLog(commands.Cog):
             {"$set": {"channel_id": canal.id}},
             upsert=True
         )
-
-        await interaction.response.send_message(
-            f"✅ Canal de logs configurado correctamente: {canal.mention}",
-            ephemeral=True
+        embed = discord.Embed(
+            title="SECKING 👑",
+            description=f"El canal de logs fue configurado correctamente: {canal.mention}",
+            color=discord.Color.from_rgb(0,0,0)
         )
+        await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @setlog.error
     async def setlog_error(self, interaction: discord.Interaction, error):
         if isinstance(error, app_commands.errors.MissingPermissions):
-            await interaction.response.send_message("🚫 Solo administradores pueden usar este comando.", ephemeral=True)
+            embed = discord.Embed(
+                title="SECKING 👑", 
+                description="¿Qué intentas hacer? solo administradores pueden usar este comando...",
+                color=discord.Color.from_rgb(0,0,0)
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
         else:
-            await interaction.response.send_message("⚠️ Ocurrió un error inesperado.", ephemeral=True)
+            embed1 = discord.Embed(
+                title="SECKING 👑",
+                description="Ocurrio un error inesperado, si esto continúa contacta con soporte en el discord oficial.",
+                color=discord.Color.from_rgb(0,0,0)
+            )
+            await interaction.response.send_message(embed=embed1, ephemeral=True)
             raise error
 
 async def setup(bot):
