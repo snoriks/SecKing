@@ -34,14 +34,14 @@ class ResetInsults(commands.Cog):
     async def resetinsults_error(self, interaction: discord.Interaction, error):
         if isinstance(error, app_commands.errors.MissingPermissions):
             embed = discord.Embed(
-                title="SECKING",
+                title="SECKING 👑",
                 description="¿Qué intentas hacer? solo administradores pueden usar este comando",
                 color=discord.Color.from_rgb(0,0,0)
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
         else:
             embed1 = discord.Embed(
-                title="SECKING",
+                title="SECKING 👑",
                 description="Ocurrio un error inesperado, si esto continúa contacta con soporte en el discord oficial.",
                 color=discord.Color.from_rgb(0,0,0)
             )

@@ -6,37 +6,49 @@ from pymongo import MongoClient
 from dotenv import load_dotenv
 
 load_dotenv()
-# Conectar a MongoDB
 mongo = MongoClient(os.getenv("MONGO_URI"))
 db = mongo["secking"]
-warns_collection = db["image_warns"]
-violence_collection = db["violent_images"]
+manual_warns = db["manual_warns"]
+nsfw_warns = db["image_warns"]
+violent_warns = db["violent_images"]
 
 class WarnsCommand(commands.Cog):
-    """Cog para el comando /warns"""
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @app_commands.command(name="warns", description="Mostrar el número de warns de NSFW de un usuario")
-    @app_commands.describe(
-        user="El usuario al que quieres consultar warns de NSFW"
-    )
+    @app_commands.command(name="warns", description="Ver los warns acumulados de un usuario")
+    @app_commands.describe(user="El usuario al que quieres consultar los warns")
     async def warns(self, interaction: discord.Interaction, user: discord.Member):
-        # Obtener warns de NSFW
-        nsfw_data = warns_collection.find_one({
-            "guild_id": interaction.guild.id,
-            "user_id": user.id
-        })
-        nsfw_warns = nsfw_data.get("warns", 0) if nsfw_data else 0
+        guild_id = interaction.guild.id
 
-        embed = discord.Embed(
-            title="📊 Warns de NSFW",
-            color=discord.Color.blue()
-        )
-        embed.set_author(name=str(user), icon_url=user.display_avatar.url)
-        embed.add_field(name="⚠️ Warns acumulados", value=str(nsfw_warns), inline=True)
+        # Buscar warns manuales
+        manual_data = manual_warns.find_one({"guild_id": guild_id, "user_id": user.id})
+        manual_reasons = manual_data.get("reasons", []) if manual_data else []
+
+        # Buscar warns NSFW
+        nsfw_data = nsfw_warns.find_one({"guild_id": guild_id, "user_id": user.id})
+        nsfw_count = nsfw_data.get("warns", 0) if nsfw_data else 0
+
+        # Buscar imágenes violentas
+        violent_data = violent_warns.find_one({"guild_id": guild_id, "user_id": user.id})
+        violent_count = violent_data.get("count", 0) if violent_data else 0
+
+        embed = discord.Embed(title=f"📋 Reporte de warns de {user}", color=discord.Color.from_rgb(0,0,0))
+        embed.set_thumbnail(url=user.display_avatar.url)
+
+        # Manual warns
+        embed.add_field(name="📕 Warns manuales", value=f"{len(manual_reasons)} warn(s)", inline=False)
+        if manual_reasons:
+            for i, reason in enumerate(manual_reasons, 1):
+                embed.add_field(name=f"#{i} - Razón", value=reason, inline=False)
+
+        # NSFW warns
+        embed.add_field(name="🔞 NSFW Warns", value=f"{nsfw_count} warn(s)", inline=False)
+
+        # Violent content
+        embed.add_field(name="🩸 Contenido violento", value=f"{violent_count} imagen(es) detectadas", inline=False)
+
         embed.set_footer(text=f"Solicitado por {interaction.user}")
-
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
 async def setup(bot: commands.Bot):
