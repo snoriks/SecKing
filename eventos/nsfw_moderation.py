@@ -42,7 +42,7 @@ class ModeracionNSFW(commands.Cog):
                         label = labels[predicted_class].lower()
                         confidence = probs[predicted_class].item()
 
-                    print(f"[IMAGEN DETECTADA] {label} ({confidence:.2f}) por {message.author}")
+                    print(f"[NSFW] {label} ({confidence:.2f}) por {message.author}")
 
                     is_nsfw = label in ["porn", "hentai", "sexy", "nsfw", "drawing"]
 
