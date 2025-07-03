@@ -12,6 +12,7 @@ db = mongo["secking"]
 manual_warns = db["manual_warns"]
 nsfw_warns = db["image_warns"]
 violent_warns = db["violent_images"]
+admin_roles = db["admin_roles"] 
 
 class ResetWarns(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -30,11 +31,26 @@ class ResetWarns(commands.Cog):
     ])
     async def resetwarns(self, interaction: discord.Interaction, user: discord.Member, category: app_commands.Choice[str], amount: int):
         guild_id = interaction.guild.id
+
+        admin_config = admin_roles.find_one({"guild_id": guild_id})
+        if not admin_config:
+            return await interaction.response.send_message(
+                "⚠️ No se ha configurado un rol administrativo con `/setrole`.",
+                ephemeral=True
+            )
+
+        admin_role_id = admin_config.get("role_id")
+        if not any(role.id == admin_role_id for role in interaction.user.roles):
+            return await interaction.response.send_message(
+                "❌ No tienes permiso para usar este comando. Se requiere el rol administrativo configurado.",
+                ephemeral=True
+            )
+
         tipo = category.value
-
         if amount < 0:
-            return await interaction.response.send_message("La cantidad no puede ser negativa.", ephemeral=True)
+            return await interaction.response.send_message("❌ La cantidad no puede ser negativa.", ephemeral=True)
 
+        # Procesar reinicio según categoría
         if tipo == "manual":
             data = manual_warns.find_one({"guild_id": guild_id, "user_id": user.id})
             reasons = data.get("reasons", []) if data else []

@@ -50,6 +50,12 @@ class ModeracionNSFW(commands.Cog):
                     canal_logs = message.guild.get_channel(log_config["channel_id"]) if log_config else None
 
                     if is_nsfw and confidence > 0.85:
+                        # Guardar imagen en memoria
+                        image_bytes = BytesIO()
+                        image.save(image_bytes, format="PNG")
+                        image_bytes.seek(0)
+                        file = discord.File(image_bytes, filename="preview.png")
+
                         await message.delete()
 
                         warn_data = warns_collection.find_one_and_update(
@@ -62,21 +68,22 @@ class ModeracionNSFW(commands.Cog):
 
                         if canal_logs:
                             embed = discord.Embed(
-                                title="Image Moderation Logs - NSFW 📜",
+                                title="📛 Imagen NSFW eliminada",
                                 description=f"{message.author.mention} envió contenido NSFW.",
-                                color=discord.Color.from_rgb(0,0,0)
+                                color=discord.Color.red()
                             )
                             embed.add_field(name="🧪 Categoría", value=label, inline=True)
                             embed.add_field(name="📈 Confianza", value=f"{confidence:.2f}", inline=True)
-                            embed.add_field(name="🔢 Conteo", value=str(total_warns), inline=True)
-                            embed.set_image(url=attachment.url)
+                            embed.add_field(name="🔢 Advertencias", value=str(total_warns), inline=True)
+                            embed.set_image(url="attachment://preview.png")
                             embed.timestamp = message.created_at
-                            await canal_logs.send(embed=embed)
+
+                            await canal_logs.send(embed=embed, file=file)
 
                             if total_warns >= 3:
                                 await canal_logs.send(
-                                    f"⚠️ {message.author.mention} alcanzó 3+ contenido NSFW. ⚠️"
-                                    f"Se recomienda que un administrador revise al usuario."
+                                    f"⚠️ {message.author.mention} alcanzó 3+ advertencias por contenido NSFW. ⚠️\n"
+                                    f"Se recomienda que un administrador lo revise."
                                 )
 
                         try:

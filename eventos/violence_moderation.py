@@ -21,16 +21,19 @@ class ModeracionViolencia(commands.Cog):
         self.fe = ViTFeatureExtractor.from_pretrained("jaranohaal/vit-base-violence-detection")
         self.model = ViTForImageClassification.from_pretrained("jaranohaal/vit-base-violence-detection")
         
-    
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         if message.author.bot or not message.attachments:
             return
         
         for att in message.attachments:
-            if att.filename.lower().endswith(('.png','.jpg','.jpeg','.webp')):
+            if att.filename.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')):
                 try:
-                    img = Image.open(BytesIO(requests.get(att.url).content)).convert("RGB")
+                    # Descargar imagen
+                    response = requests.get(att.url)
+                    img = Image.open(BytesIO(response.content)).convert("RGB")
+
+                    # Analizar imagen
                     inputs = self.fe(images=img, return_tensors="pt")
                     with torch.no_grad():
                         logits = self.model(**inputs).logits
@@ -42,7 +45,14 @@ class ModeracionViolencia(commands.Cog):
                     print(f"[VIOLENCIA] {label} ({conf:.2f}) por {message.author}")
 
                     if label == "violent" and conf > 0.85:
+                        # Guardar imagen en memoria antes de eliminarla
+                        image_bytes = BytesIO()
+                        img.save(image_bytes, format="PNG")
+                        image_bytes.seek(0)
+                        file = discord.File(image_bytes, filename="preview.png")
+
                         await message.delete()
+
                         vio = violence_collection.find_one_and_update(
                             {"guild_id": message.guild.id, "user_id": message.author.id},
                             {"$inc": {"count": 1}},
@@ -51,29 +61,30 @@ class ModeracionViolencia(commands.Cog):
                         )
                         total = vio.get("count", 1)
 
+                        # Canal de logs
                         lc = logs_collection.find_one({"guild_id": message.guild.id})
                         ch = message.guild.get_channel(lc["channel_id"]) if lc else None
                         if ch:
-                            e = discord.Embed(
+                            embed = discord.Embed(
                                 title="🚨 Imagen violenta eliminada",
                                 description=f"{message.author.mention} envió contenido violento.",
-                                color=discord.Color.from_rgb(0,0,0)
+                                color=discord.Color.red()
                             )
-                            e.add_field(name="📈 Confianza", value=f"{conf:.2f}", inline=True)
-                            e.add_field(name="🔢 Conteo", value=str(total), inline=True)
-                            e.set_image(url=att.url)
-                            e.timestamp = message.created_at
-                            await ch.send(embed=e)
+                            embed.add_field(name="📈 Confianza", value=f"{conf:.2f}", inline=True)
+                            embed.add_field(name="🔢 Conteo", value=str(total), inline=True)
+                            embed.set_image(url="attachment://preview.png")
+                            embed.timestamp = message.created_at
+
+                            await ch.send(embed=embed, file=file)
 
                             if total >= 3:
                                 await ch.send(
                                     f"⚠️ {message.author.mention} alcanzó 3+ contenidos violentos. ⚠️"
                                 )
-
                         try:
                             await message.author.send(
                                 f"Tu imagen fue eliminada en **{message.guild.name}** por violencia. "
-                                "Continúa en contacto con un administrador si persistente."
+                                "Si crees que fue un error, contacta a un administrador."
                             )
                         except discord.Forbidden:
                             pass

@@ -6,12 +6,12 @@ from pymongo import MongoClient
 from dotenv import load_dotenv
 import os
 
-
 load_dotenv()
 
 mongo = MongoClient(os.getenv("MONGO_URI"))
 db = mongo["secking"]
 user_warns = db["manual_warns"]
+admin_roles = db["admin_roles"]  
 
 class WarnActionsView(View):
     def __init__(self, user: discord.Member):
@@ -48,24 +48,40 @@ class WarnCommand(commands.Cog):
     @app_commands.command(name="warn", description="Aplicar un warn a un usuario con razón obligatoria.")
     @app_commands.describe(user="Usuario a advertir", reason="Razón del warn")
     async def warn(self, interaction: discord.Interaction, user: discord.Member, reason: str):
-        if not interaction.user.guild_permissions.kick_members and not interaction.user.guild_permissions.ban_members:
-            return await interaction.response.send_message("🚫 No tienes permisos para usar este comando.", ephemeral=True)
+        guild_id = interaction.guild.id
+        admin_config = admin_roles.find_one({"guild_id": guild_id})
 
-        warn_data = user_warns.find_one({"guild_id": interaction.guild.id, "user_id": user.id})
+        if not admin_config:
+            return await interaction.response.send_message(
+                "⚠️ No se ha establecido un rol administrativo con `/setrole`. Solo los administradores pueden configurarlo.",
+                ephemeral=True
+            )
+
+        role_id = admin_config.get("role_id")
+        has_admin_role = any(role.id == role_id for role in interaction.user.roles)
+
+        if not has_admin_role:
+            return await interaction.response.send_message(
+                "❌ No tienes permiso para usar este comando. Se requiere el rol administrativo configurado.",
+                ephemeral=True
+            )
+
+        # Guardar warn
+        warn_data = user_warns.find_one({"guild_id": guild_id, "user_id": user.id})
 
         if warn_data:
             reasons = warn_data.get("reasons", [])
             reasons.append(reason)
             total_warns = len(reasons)
             user_warns.update_one(
-                {"guild_id": interaction.guild.id, "user_id": user.id},
+                {"guild_id": guild_id, "user_id": user.id},
                 {"$set": {"reasons": reasons}}
             )
         else:
             reasons = [reason]
             total_warns = 1
             user_warns.insert_one({
-                "guild_id": interaction.guild.id,
+                "guild_id": guild_id,
                 "user_id": user.id,
                 "reasons": reasons
             })
@@ -76,7 +92,7 @@ class WarnCommand(commands.Cog):
             embed = discord.Embed(
                 title=f"🚨 WARNS - {user}",
                 description=f"**Warn aplicado por:** {interaction.user.mention}",
-                color=discord.Color.from_rgb(0,0,0)
+                color=discord.Color.from_rgb(0, 0, 0)
             )
             embed.set_thumbnail(url=user.display_avatar.url)
             embed.set_footer(text=f"Usuario ID: {user.id}")

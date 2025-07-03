@@ -24,12 +24,14 @@
  - Use: **/warns @user**
 - **/resetwarns** Allows you to reset or reduce a users warns by type (**manual, nsfw, violence**) and by a specific amount.
  - Use: **/resetwarns user: @user category: nsfw amount: 0**
-- ** /infoinsults** Displays the history of insults automatically detected by AI on a server user.
- - Use:   **/infoinsults @user**
+- **/infoinsults** Displays the history of insults automatically detected by AI on a server user.
+ - Use: **/infoinsults @user**
 - **/resetinsults** Completely erases the history of insults detected in a user.
  - Use: **/resetinsults @user**
-- **/setlog** Establece el canal donde se enviarán los logs de moderación (**insultos, warns, imágenes, etc.**).
- - **/setlog channel: #channel-name**
+- **/setlog** Sets the channel where moderation logs will be sent (**insultos, warns, imágenes, etc.**).
+ - Use: **/setlog channel: #channel-name**
+- **/setrole** Sets a server role that can use bot administrative commands.
+ - Use: **/setrole (role)**
 
 ---
 
